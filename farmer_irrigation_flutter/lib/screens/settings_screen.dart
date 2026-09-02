@@ -71,15 +71,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('🌐 Language / भाषा / ಭಾಷೆ',
+                  const Text('🌐 Language / भाषा / ਭਾಷೆ / ਭਾਸ਼ਾ',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.spaceAround,
                     children: [
                       _buildLangBtn('en', 'English'),
                       _buildLangBtn('hi', 'हिंदी'),
                       _buildLangBtn('kn', 'ಕನ್ನಡ'),
+                      _buildLangBtn('pa', 'ਪੰਜਾਬੀ'),
                     ],
                   )
                 ],
