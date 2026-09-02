@@ -907,34 +907,103 @@ function WeatherView({ t }: any) {
 function AnalyticsView({ t, history, results }: any) {
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl shadow p-5">
-        <h3 className="font-semibold mb-1">{t.trendTitle}</h3>
-        <p className="text-xs text-gray-400 mb-4">{t.trendNote}</p>
+      {/* 1. Water Usage Trend (Dual Y-Axis Line Chart) */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="font-bold text-lg text-slate-900">{t.trendTitle}</h3>
+            <p className="text-xs text-slate-500">{t.trendNote}</p>
+          </div>
+          <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200">
+            Dual Axis Live Sync
+          </span>
+        </div>
+
         {history.length < 2 ? (
-          <p className="text-sm text-gray-500">{t.trendHint}</p>
+          <div className="py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 my-4">
+            <p className="text-sm font-semibold text-slate-600">{t.trendHint}</p>
+            <p className="text-xs text-slate-400 mt-1">Press "Refresh" at the top header to capture history data points over time.</p>
+          </div>
         ) : (
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={history}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" fontSize={11} />
-              <YAxis fontSize={11} />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="totalLiters" stroke="#2563eb" name={t.stats.totalWater} />
-              <Line type="monotone" dataKey="avgMoisture" stroke="#16a34a" name={t.stats.avgMoisture} />
+          <ResponsiveContainer width="100%" height={320}>
+            <LineChart data={history} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="time" fontSize={11} stroke="#64748b" />
+              
+              {/* Left Y-Axis: Water Needed (Formatted in M L or k L) */}
+              <YAxis
+                yAxisId="left"
+                fontSize={11}
+                stroke="#2563eb"
+                tickFormatter={(v) => (v >= 1000000 ? `${(v / 1000000).toFixed(1)}M L` : v >= 1000 ? `${(v / 1000).toFixed(0)}k L` : `${v} L`)}
+              />
+              
+              {/* Right Y-Axis: Soil Moisture % (0 to 100%) */}
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                domain={[0, 100]}
+                fontSize={11}
+                stroke="#16a34a"
+                tickFormatter={(v) => `${v}%`}
+              />
+              
+              <Tooltip
+                contentStyle={{ backgroundColor: "#0f172a", borderRadius: "16px", color: "#fff", border: "none", padding: "12px 16px" }}
+                formatter={(value: any, name: any) => [
+                  name === t.stats.totalWater ? `${Number(value).toLocaleString()} Liters` : `${value}%`,
+                  name,
+                ]}
+              />
+              <Legend wrapperStyle={{ paddingTop: "10px" }} />
+              <Line yAxisId="left" type="monotone" dataKey="totalLiters" stroke="#2563eb" strokeWidth={3} name={t.stats.totalWater} dot={{ r: 5, fill: "#2563eb" }} />
+              <Line yAxisId="right" type="monotone" dataKey="avgMoisture" stroke="#16a34a" strokeWidth={3} name={t.stats.avgMoisture} dot={{ r: 5, fill: "#16a34a" }} />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow p-5">
-        <h3 className="font-semibold mb-4">{t.waterByField}</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={results}>
-            <XAxis dataKey="zone" fontSize={12} />
-            <YAxis fontSize={12} />
-            <Tooltip />
-            <Bar dataKey="predicted_liters" fill="#2563eb" radius={[6, 6, 0, 0]} name="Liters" />
+      {/* 2. Water Need by Field Bar Chart */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-bold text-lg text-slate-900">{t.waterByField}</h3>
+            <p className="text-xs text-slate-500">Volumetric water requirements per field block</p>
+          </div>
+          <span className="text-xs bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-full border border-blue-200">
+            Per-Field Breakdown
+          </span>
+        </div>
+
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart data={results} margin={{ top: 20, right: 20, left: 10, bottom: 25 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis
+              dataKey="name"
+              fontSize={11}
+              stroke="#64748b"
+              interval={0}
+              angle={-15}
+              textAnchor="end"
+              tickFormatter={(v) => (v.length > 15 ? `${v.substring(0, 15)}...` : v)}
+            />
+            <YAxis
+              fontSize={11}
+              stroke="#64748b"
+              tickFormatter={(v) => (v >= 1000000 ? `${(v / 1000000).toFixed(1)}M L` : v >= 1000 ? `${(v / 1000).toFixed(0)}k L` : `${v} L`)}
+            />
+            <Tooltip
+              contentStyle={{ backgroundColor: "#0f172a", borderRadius: "16px", color: "#fff", border: "none", padding: "12px 16px" }}
+              formatter={(value: any) => [`${Number(value).toLocaleString()} Liters`, "Predicted Water Need"]}
+            />
+            <Bar dataKey="predicted_liters" radius={[8, 8, 0, 0]} name="Water Needed (Liters)">
+              {results.map((entry: any, i: number) => (
+                <Cell
+                  key={i}
+                  fill={entry.moisture < 25 ? "#ef4444" : entry.moisture < 45 ? "#f59e0b" : "#2563eb"}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
