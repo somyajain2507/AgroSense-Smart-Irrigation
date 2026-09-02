@@ -1,0 +1,11 @@
+{
+    "name": "AgroSense Smart Farmer Irrigation App",
+    "short_name": "AgroSense",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#047857",
+    "description": "AgroSense Smart Irrigation Mobile Application in Flutter",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false
+}
