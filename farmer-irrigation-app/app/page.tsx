@@ -95,6 +95,13 @@ export default function Home() {
   const [targetEmail, setTargetEmail] = useState("farmer.ramesh@gmail.com");
   const [smsSentStatus, setSmsSentStatus] = useState<string | null>(null);
 
+  // Twilio & Direct API Dispatch State
+  const [twilioSid, setTwilioSid] = useState("");
+  const [twilioToken, setTwilioToken] = useState("");
+  const [twilioFrom, setTwilioFrom] = useState("");
+  const [showTwilioConfig, setShowTwilioConfig] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
+
   const [form, setForm] = useState({
     Crop_Type: 1,
     Soil_Type: 1,
@@ -119,7 +126,7 @@ export default function Home() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Check saved user session
+    // Check saved user session & Twilio config
     const saved = localStorage.getItem("farmer_user");
     if (saved) {
       try {
@@ -131,6 +138,12 @@ export default function Home() {
         console.error(e);
       }
     }
+    const sSid = localStorage.getItem("twilio_sid");
+    const sTok = localStorage.getItem("twilio_token");
+    const sFrom = localStorage.getItem("twilio_from");
+    if (sSid) setTwilioSid(sSid);
+    if (sTok) setTwilioToken(sTok);
+    if (sFrom) setTwilioFrom(sFrom);
   }, []);
 
   function handleChange(key: string, value: any) {
@@ -606,12 +619,75 @@ export default function Home() {
                   <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
                     <span>🔔</span> {t.landing?.dispatcherTitle || "Instant Notification Alert Dispatcher (Mobile SMS & Gmail)"}
                   </span>
-                  {user && (
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/20 font-bold">
-                      {t.auth?.verified || "Logged in"}: {user.name}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowTwilioConfig(!showTwilioConfig)}
+                      className="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-400/30 font-bold flex items-center gap-1 transition"
+                    >
+                      <span>⚙️</span> Twilio SMS API Settings
+                    </button>
+                    {user && (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/20 font-bold">
+                        {t.auth?.verified || "Logged in"}: {user.name}
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Twilio Credentials Config Panel */}
+                {showTwilioConfig && (
+                  <div className="bg-black/50 border border-amber-500/40 p-4 rounded-xl space-y-3 text-xs">
+                    <div className="flex justify-between items-center text-amber-300 font-bold">
+                      <span>🔑 Twilio SMS & Direct Email Backend Settings</span>
+                      <span className="text-[10px] text-slate-400">Auto-sends SMS directly to phone lockscreen</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-300 block mb-1">Twilio Account SID</label>
+                        <input
+                          type="text"
+                          value={twilioSid}
+                          onChange={(e) => {
+                            setTwilioSid(e.target.value);
+                            localStorage.setItem("twilio_sid", e.target.value);
+                          }}
+                          placeholder="ACxxxxxxxxxxxxxxxx..."
+                          className="w-full bg-slate-900 border border-slate-700 text-amber-200 px-2.5 py-1.5 rounded text-[11px] font-mono outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-300 block mb-1">Twilio Auth Token</label>
+                        <input
+                          type="password"
+                          value={twilioToken}
+                          onChange={(e) => {
+                            setTwilioToken(e.target.value);
+                            localStorage.setItem("twilio_token", e.target.value);
+                          }}
+                          placeholder="••••••••••••••••"
+                          className="w-full bg-slate-900 border border-slate-700 text-amber-200 px-2.5 py-1.5 rounded text-[11px] font-mono outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-300 block mb-1">Twilio Sender Number</label>
+                        <input
+                          type="text"
+                          value={twilioFrom}
+                          onChange={(e) => {
+                            setTwilioFrom(e.target.value);
+                            localStorage.setItem("twilio_from", e.target.value);
+                          }}
+                          placeholder="+18881234567"
+                          className="w-full bg-slate-900 border border-slate-700 text-amber-200 px-2.5 py-1.5 rounded text-[11px] font-mono outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-emerald-400">
+                      💡 Entering your Twilio credentials allows backend API to deliver real SMS directly to {targetPhone} without opening native SMS apps!
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Phone Number Input */}
@@ -750,72 +826,68 @@ export default function Home() {
                     <span>📧</span> {t.landing?.sendGmailBtn || "Open Gmail Draft"}
                   </button>
 
-                  {/* 4. Dual Dispatch All */}
+                  {/* 4. Automated Twilio SMS + Direct Dispatch Button */}
                   <button
                     type="button"
-                    onClick={() => {
+                    disabled={dispatching}
+                    onClick={async () => {
+                      setDispatching(true);
                       const cropNameKey = cropOptions.find((c) => c.value === Number(form.Crop_Type))?.key || "wheat";
                       const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
-                      const slot = result.schedule?.[0]?.time_slot || "06:00 AM - 08:00 AM";
                       const cleanPhone = targetPhone.replace(/[^0-9]/g, "");
                       const cleanWaPhone = cleanPhone.length <= 10 ? '91' + cleanPhone : cleanPhone;
                       const nowStr = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
                       const refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`;
 
-                      const smsContent = `AgroSense Alert [${refId}] (${nowStr}): ${cropLabel} (${form.Field_Area_hectare} ha) requires ${result.liters.toLocaleString()} Liters water at ${slot}. Moisture=${form.Soil_Moisture}%, Temp=${form.Temperature_C}°C, Rain=${form.Rainfall_mm}mm.`;
-
-                      const waContent = `🌱 *AgroSense Smart Water Alert* [Ref #${refId}]\n📅 *Timestamp:* ${nowStr}\n\n🌾 *Crop:* ${cropLabel} (${form.Field_Area_hectare} ha)\n💧 *Water Needed:* ${result.liters.toLocaleString()} Liters\n🕒 *Schedule Slot:* ${slot}\n📊 *Soil Moisture:* ${form.Soil_Moisture}%\n🌡️ *Temperature:* ${form.Temperature_C}°C\n🌧️ *Rainfall:* ${form.Rainfall_mm} mm\n\nIrrigate on time to optimize yield!`;
-
+                      const smsContent = `AgroSense Alert [${refId}] (${nowStr}): ${cropLabel} (${form.Field_Area_hectare} ha) requires ${result.liters.toLocaleString()} Liters water.`;
+                      const waContent = `🌱 *AgroSense Smart Water Alert* [Ref #${refId}]\n📅 *Timestamp:* ${nowStr}\n\n🌾 *Crop:* ${cropLabel} (${form.Field_Area_hectare} ha)\n💧 *Water Needed:* ${result.liters.toLocaleString()} Liters\n📊 *Soil Moisture:* ${form.Soil_Moisture}%\n🌡️ *Temperature:* ${form.Temperature_C}°C\n🌧️ *Rainfall:* ${form.Rainfall_mm} mm`;
                       const subject = `AgroSense Irrigation Report [${refId}] - ${cropLabel} (${nowStr})`;
-                      const emailBody = `Hi ${user?.name || "Farmer"},\n\nHere is your real-time AgroSense ML Water Prediction Report (Ref: #${refId}):\n\n- Timestamp: ${nowStr}\n- Crop: ${cropLabel}\n- Farm Area: ${form.Field_Area_hectare} hectares\n- Recommended Water Volume: ${result.liters.toLocaleString()} Liters\n- Optimal Time Slot: ${slot}\n- Soil Moisture: ${form.Soil_Moisture}%\n- Temperature: ${form.Temperature_C}°C\n- Rainfall: ${form.Rainfall_mm} mm\n\nHappy Farming,\nAgroSense Intelligence Team`;
+                      const emailBody = `Hi ${user?.name || "Farmer"},\n\nHere is your real-time AgroSense ML Water Prediction Report (Ref: #${refId}):\n\n- Timestamp: ${nowStr}\n- Crop: ${cropLabel}\n- Farm Area: ${form.Field_Area_hectare} hectares\n- Recommended Water Volume: ${result.liters.toLocaleString()} Liters\n- Soil Moisture: ${form.Soil_Moisture}%\n- Temperature: ${form.Temperature_C}°C\n- Rainfall: ${form.Rainfall_mm} mm\n\nHappy Farming,\nAgroSense Intelligence Team`;
 
-                      const smsNotif: NotificationItem = {
-                        id: Date.now().toString(),
-                        title: `📱 Mobile Alert -> ${targetPhone} [${refId}]`,
-                        message: smsContent,
-                        time: "Just now",
-                        type: "schedule",
-                        read: false,
-                      };
+                      setSmsSentStatus(`⏳ Triggering Automated Backend Dispatch (Twilio SMS + Direct Email)...`);
 
-                      const emailNotif: NotificationItem = {
-                        id: (Date.now() + 1).toString(),
-                        title: `📧 Gmail -> ${targetEmail} [${refId}]`,
-                        message: `Gmail draft created for ${targetEmail}: ${result.liters.toLocaleString()} L.`,
-                        time: "Just now",
-                        type: "system",
-                        read: false,
-                      };
-
-                      setNotifications((prev) => [smsNotif, emailNotif, ...prev]);
-                      setSmsSentStatus(`🚀 Dispatching Dual Alert to Phone ${targetPhone} & Gmail ${targetEmail}...`);
-
-                      // 1. Open Gmail Compose Tab
-                      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${targetEmail}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`, "_blank");
-
-                      // 2. Open WhatsApp Direct Message for phone number (works on PC + Mobile)
-                      window.open(`https://wa.me/${cleanWaPhone}?text=${encodeURIComponent(waContent)}`, "_blank");
-
-                      // 3. Fallback Trigger native SMS protocol
                       try {
-                        const smsLink = document.createElement("a");
-                        smsLink.href = `sms:${cleanPhone}?body=${encodeURIComponent(smsContent)}`;
-                        smsLink.click();
-                      } catch (e) {
-                        console.log("SMS URI trigger fallback", e);
-                      }
-
-                      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-                        new Notification("AgroSense Multi-Channel Dispatch", {
-                          body: `Alert dispatched to ${targetPhone} and ${targetEmail}.`,
+                        const apiRes = await fetch("/api/send-alert", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            phone: targetPhone,
+                            email: targetEmail,
+                            crop: cropLabel,
+                            liters: result.liters,
+                            moisture: form.Soil_Moisture,
+                            temp: form.Temperature_C,
+                            rain: form.Rainfall_mm,
+                            area: form.Field_Area_hectare,
+                            refId,
+                            twilioSid,
+                            twilioToken,
+                            twilioFrom,
+                          }),
                         });
-                      }
 
-                      setTimeout(() => setSmsSentStatus(null), 6000);
+                        const resData = await apiRes.json();
+
+                        // Always open client fallbacks if Twilio not fully configured yet
+                        if (resData.sms?.sent) {
+                          setSmsSentStatus(`✅ Twilio Direct SMS Sent to ${targetPhone}!`);
+                        } else {
+                          // Show status & trigger client tabs fallback
+                          setSmsSentStatus(`🚀 Launching WhatsApp & Gmail tabs for ${targetPhone} & ${targetEmail}...`);
+                          window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${targetEmail}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`, "_blank");
+                          window.open(`https://wa.me/${cleanWaPhone}?text=${encodeURIComponent(waContent)}`, "_blank");
+                          if (!twilioSid) setShowTwilioConfig(true);
+                        }
+                      } catch (err: any) {
+                        window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${targetEmail}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`, "_blank");
+                        window.open(`https://wa.me/${cleanWaPhone}?text=${encodeURIComponent(waContent)}`, "_blank");
+                      } finally {
+                        setDispatching(false);
+                      }
                     }}
-                    className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md hover:brightness-110 transition flex items-center gap-1.5"
+                    className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md hover:brightness-110 transition flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    <span>🚀</span> {t.landing?.sendBothBtn || "Send Dual Alert (SMS/WhatsApp + Gmail)"}
+                    <span>🚀</span> {dispatching ? "Sending via Twilio..." : "Send Dual Alert (Twilio SMS + Gmail)"}
                   </button>
                 </div>
 
