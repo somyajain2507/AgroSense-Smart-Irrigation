@@ -473,58 +473,247 @@ function optionSets(t: any) {
 }
 
 function MyFieldsView({ t, fields, setFields }: any) {
-  function updateField(index: number, key: string, value: string) {
-    const updated = [...fields];
-    updated[index] = { ...updated[index], [key]: Number(value) };
-    setFields(updated);
-  }
-  function updateFieldName(index: number, value: string) {
-    const updated = [...fields];
-    updated[index] = { ...updated[index], name: value };
-    setFields(updated);
-  }
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newCropType, setNewCropType] = useState(1);
+  const [newArea, setNewArea] = useState(2.47);
+  const [newIrrigationType, setNewIrrigationType] = useState(1);
+  const [newGrowthStage, setNewGrowthStage] = useState(2);
+  const [newSoilMoisture, setNewSoilMoisture] = useState(70);
+  const [newTemp, setNewTemp] = useState(28);
+
+  const totalAcres = fields
+    .reduce((sum: number, f: any) => sum + (f.Field_Area_hectare ? f.Field_Area_hectare * 1.235 : 2.47), 0)
+    .toFixed(1);
+
   function removeField(index: number) {
     setFields(fields.filter((_: any, i: number) => i !== index));
   }
-  function addField() {
-    const nextId = fields.length + 1;
-    setFields([
-      ...fields,
-      { name: `New Field ${nextId}`, zone: `Zone ${String.fromCharCode(65 + (nextId - 1) % 26)}`, crop: "Wheat", Crop_Type: 1, Soil_Type: 1, Season: 1, Crop_Growth_Stage: 1, Irrigation_Type: 1, Water_Source: 1, Soil_pH: 6.5, Soil_Moisture: 35, Temperature_C: 30, Humidity: 60, Rainfall_mm: 5, Sunlight_Hours: 8, Wind_Speed_kmh: 10, Field_Area_hectare: 2, Mulching_Used: 0, Previous_Irrigation_mm: 15 },
-    ]);
+
+  function handleSaveNewField(e: React.FormEvent) {
+    e.preventDefault();
+    const cropNames: Record<number, string> = {
+      1: "Wheat field",
+      2: "Rice field",
+      3: "Sugarcane field",
+      4: "Cotton field",
+      5: "Maize field",
+    };
+    const finalName = newFieldName.trim() || cropNames[newCropType] || `Field ${fields.length + 1}`;
+    const hectareVal = Number((newArea / 1.235).toFixed(2));
+
+    const newFieldObj = {
+      name: finalName,
+      zone: `Zone ${String.fromCharCode(65 + (fields.length % 26))}`,
+      crop: cropNames[newCropType],
+      Crop_Type: newCropType,
+      Soil_Type: 1,
+      Season: 1,
+      Crop_Growth_Stage: newGrowthStage,
+      Irrigation_Type: newIrrigationType,
+      Water_Source: 1,
+      Soil_pH: 6.5,
+      Soil_Moisture: newSoilMoisture,
+      Temperature_C: newTemp,
+      Humidity: 60,
+      Rainfall_mm: 5,
+      Sunlight_Hours: 8,
+      Wind_Speed_kmh: 10,
+      Field_Area_hectare: hectareVal,
+      Mulching_Used: 0,
+      Previous_Irrigation_mm: 15,
+    };
+
+    setFields([...fields, newFieldObj]);
+    setIsAddModalOpen(false);
+    setNewFieldName("");
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white rounded-3xl p-6 shadow-sm flex items-center justify-between">
+      {/* Header matching exact layout */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="font-black text-2xl">{t.myFieldsTitle} ({fields.length})</h3>
-          <p className="text-emerald-200 text-xs mt-1">Manage field parameters. All additions, deletions and edits instantly update Irrigation Plans & Sensor Data!</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Your fields</h2>
+          <p className="text-sm font-semibold text-emerald-800">
+            {fields.length} Fields · {totalAcres} acres
+          </p>
         </div>
-        <button type="button" onClick={addField} className="vibrant-btn text-white px-5 py-2.5 rounded-2xl text-xs font-black shadow-lg hover:brightness-110 transition flex items-center gap-1.5">
-          <span>🌱</span> {t.addField}
+
+        {/* Big Action Button */}
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="w-full md:w-auto vibrant-btn text-white py-3.5 px-8 rounded-2xl font-black text-sm shadow-xl hover:brightness-110 transition flex items-center justify-center gap-2"
+        >
+          <span className="text-lg">+</span> Add field and predict
         </button>
       </div>
 
-      <div className="space-y-5">
+      {/* Grid of Fields matching picture cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {fields.map((f: any, i: number) => (
-          <FieldCard key={i} t={t} field={f} index={i} updateField={updateField} updateFieldName={updateFieldName} removeField={removeField} />
+          <FieldCard key={i} t={t} field={f} index={i} removeField={removeField} />
         ))}
       </div>
+
+      {/* Add Field & Predict Custom Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-slate-900 border border-emerald-500/30 text-white rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-black text-emerald-400 flex items-center gap-2">
+                <span>🌱</span> Add New Field & Predict
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewField} className="space-y-4 text-xs font-semibold">
+              <div>
+                <label className="block text-slate-300 mb-1">Field Name (Custom Name)</label>
+                <input
+                  type="text"
+                  value={newFieldName}
+                  onChange={(e) => setNewFieldName(e.target.value)}
+                  placeholder="e.g. Rice field, Tomato Field"
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-400"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1">Crop Type</label>
+                  <select
+                    value={newCropType}
+                    onChange={(e) => setNewCropType(Number(e.target.value))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 outline-none focus:border-emerald-400"
+                  >
+                    <option value={1}>Wheat 🌾</option>
+                    <option value={2}>Rice 🌾</option>
+                    <option value={3}>Sugarcane 🎋</option>
+                    <option value={4}>Cotton ☁️</option>
+                    <option value={5}>Maize 🌽</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1">Field Area (Acres)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={newArea}
+                    onChange={(e) => setNewArea(Number(e.target.value))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 outline-none focus:border-emerald-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1">Irrigation Method</label>
+                  <select
+                    value={newIrrigationType}
+                    onChange={(e) => setNewIrrigationType(Number(e.target.value))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 outline-none focus:border-emerald-400"
+                  >
+                    <option value={1}>Drip</option>
+                    <option value={2}>Sprinkler</option>
+                    <option value={3}>Flood</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1">Growth Stage</label>
+                  <select
+                    value={newGrowthStage}
+                    onChange={(e) => setNewGrowthStage(Number(e.target.value))}
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 outline-none focus:border-emerald-400"
+                  >
+                    <option value={1}>Initial / Sowing</option>
+                    <option value={2}>Vegetative</option>
+                    <option value={3}>Flowering</option>
+                    <option value={4}>Harvest</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-slate-300 mb-1">
+                  <span>Soil Moisture</span>
+                  <span className="text-emerald-400 font-bold">{newSoilMoisture}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="95"
+                  value={newSoilMoisture}
+                  onChange={(e) => setNewSoilMoisture(Number(e.target.value))}
+                  className="w-full accent-emerald-500 cursor-pointer h-2 bg-slate-800 rounded-lg"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 vibrant-btn text-white rounded-xl font-bold shadow-lg"
+                >
+                  Save Field & Predict
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function FieldCard({ t, field, index, updateField, updateFieldName, removeField }: any) {
+function FieldCard({ t, field, index, removeField }: any) {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const opts = optionSets(t);
+  const [showPlan, setShowPlan] = useState(false);
 
-  async function getIrrigationPlan() {
+  const cropEmoji =
+    field.Crop_Type === 1 ? "🌾" :
+    field.Crop_Type === 2 ? "🌾" :
+    field.Crop_Type === 3 ? "🎋" :
+    field.Crop_Type === 4 ? "☁️" :
+    field.Crop_Type === 5 ? "🌽" : "🌱";
+
+  const areaAcres = field.Field_Area_hectare
+    ? (field.Field_Area_hectare * 1.235).toFixed(2)
+    : "2.47";
+
+  const irrigationMethod =
+    field.Irrigation_Type === 1 ? "Drip" :
+    field.Irrigation_Type === 2 ? "Sprinkler" : "Flood";
+
+  const growthStageName =
+    field.Crop_Growth_Stage === 1 ? "Initial" :
+    field.Crop_Growth_Stage === 2 ? "Vegetative" :
+    field.Crop_Growth_Stage === 3 ? "Flowering" : "Harvest";
+
+  const isIrrigated = field.Soil_Moisture >= 45;
+
+  async function togglePrediction() {
+    if (showPlan) {
+      setShowPlan(false);
+      return;
+    }
+
     setLoading(true);
-    setError("");
-    setResult(null);
     try {
       const { name, zone, crop, ...payload } = field;
       const res = await fetch(`${API_URL}/predict`, {
@@ -533,106 +722,119 @@ function FieldCard({ t, field, index, updateField, updateFieldName, removeField 
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      setResult({ liters: Math.round(data.predicted_water_liters), schedule: data.irrigation_schedule || [] });
+      setResult({ liters: Math.round(data.predicted_water_liters || 0), schedule: data.irrigation_schedule || [] });
+      setShowPlan(true);
     } catch (err) {
       console.error(err);
-      setError(t.error);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 space-y-4">
-      <div className="flex items-center justify-between border-b pb-3">
+    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4 hover:border-emerald-500/40 transition">
+      {/* Top Header Row */}
+      <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-sm">
-            #{index + 1}
-          </span>
+          <span className="text-2xl">{cropEmoji}</span>
           <div>
-            <input
-              type="text"
-              className="font-black text-lg text-slate-900 border-b border-dashed border-slate-300 hover:border-emerald-600 focus:border-emerald-600 outline-none"
-              value={field.name}
-              onChange={(e) => updateFieldName(index, e.target.value)}
-            />
-            <span className="text-xs text-slate-400 font-semibold ml-2">[{field.zone}]</span>
+            <h3 className="font-black text-lg text-white leading-tight">{field.name}</h3>
+            <p className="text-xs font-medium text-slate-400">
+              {areaAcres} acres · {irrigationMethod}
+            </p>
           </div>
         </div>
-        <button type="button" onClick={() => removeField(index)} className="text-rose-600 hover:text-rose-800 text-xs font-bold bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition">
-          🗑️ {t.remove}
+
+        {/* Status Badge matching exact pill */}
+        <span
+          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+            isIrrigated
+              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+              : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+          }`}
+        >
+          {isIrrigated ? "IRRIGATED" : "NEEDS WATER"}
+        </span>
+      </div>
+
+      {/* Soil Moisture Bar */}
+      <div className="space-y-1.5 pt-1">
+        <div className="flex justify-between items-center text-xs font-bold">
+          <span className="text-slate-400">Soil moisture</span>
+          <span className="text-white font-black">{field.Soil_Moisture}%</span>
+        </div>
+        <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 ${
+              field.Soil_Moisture < 25
+                ? "bg-rose-500"
+                : field.Soil_Moisture < 45
+                ? "bg-amber-500"
+                : "bg-emerald-500"
+            }`}
+            style={{ width: `${Math.min(100, Math.max(5, field.Soil_Moisture))}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Sub Info Boxes matching exact picture layout */}
+      <div className="grid grid-cols-3 gap-2 text-xs pt-1">
+        {/* Growth Stage Box */}
+        <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-3">
+          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
+            GROWTH STAGE
+          </span>
+          <span className="font-bold text-emerald-300 text-xs truncate block">{growthStageName}</span>
+        </div>
+
+        {/* Sensor Box */}
+        <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-3">
+          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
+            SENSOR
+          </span>
+          <span className="font-bold text-slate-300 text-xs block">—</span>
+        </div>
+
+        {/* Delete Button Box */}
+        <div className="flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => removeField(index)}
+            className="w-full h-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-2xl py-2 px-3 font-bold text-xs flex items-center justify-center gap-1 transition"
+          >
+            <span>🗑️</span> Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Interactive Footer Link */}
+      <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={togglePrediction}
+          className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
+        >
+          <span>{loading ? "⏳ Calculating..." : "Tap for full prediction →"}</span>
         </button>
+
+        {showPlan && result && (
+          <span className="text-xs font-black text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-0.5 rounded-lg">
+            {result.liters.toLocaleString()} Liters
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 text-xs">
-        <label className="font-semibold text-slate-600">{t.fieldLabels.crop}
-          <select className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Crop_Type} onChange={(e) => updateField(index, "Crop_Type", e.target.value)}>
-            {opts.cropOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.soilType}
-          <select className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Soil_Type} onChange={(e) => updateField(index, "Soil_Type", e.target.value)}>
-            {opts.soilOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.season}
-          <select className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Season} onChange={(e) => updateField(index, "Season", e.target.value)}>
-            {opts.seasonOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.growthStage}
-          <select className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Crop_Growth_Stage} onChange={(e) => updateField(index, "Crop_Growth_Stage", e.target.value)}>
-            {opts.growthStageOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.irrigationType}
-          <select className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Irrigation_Type} onChange={(e) => updateField(index, "Irrigation_Type", e.target.value)}>
-            {opts.irrigationTypeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.waterSource}
-          <select className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Water_Source} onChange={(e) => updateField(index, "Water_Source", e.target.value)}>
-            {opts.waterSourceOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.mulching}
-          <select className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Mulching_Used} onChange={(e) => updateField(index, "Mulching_Used", e.target.value)}>
-            {opts.mulchingOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.soilPh}
-          <input type="number" step="0.1" className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Soil_pH} onChange={(e) => updateField(index, "Soil_pH", e.target.value)} />
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.moisture}
-          <input type="number" className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Soil_Moisture} onChange={(e) => updateField(index, "Soil_Moisture", e.target.value)} />
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.temperature}
-          <input type="number" className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Temperature_C} onChange={(e) => updateField(index, "Temperature_C", e.target.value)} />
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.humidity}
-          <input type="number" className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Humidity} onChange={(e) => updateField(index, "Humidity", e.target.value)} />
-        </label>
-        <label className="font-semibold text-slate-600">{t.fieldLabels.area}
-          <input type="number" step="0.1" className="w-full border rounded-xl p-2 mt-1 bg-slate-50 outline-none font-medium focus:ring-2 focus:ring-emerald-500" value={field.Field_Area_hectare} onChange={(e) => updateField(index, "Field_Area_hectare", e.target.value)} />
-        </label>
-      </div>
-
-      <div className="flex items-center gap-3 pt-2">
-        <button type="button" onClick={getIrrigationPlan} disabled={loading} className="vibrant-btn text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition disabled:opacity-50">
-          {loading ? t.calculating : t.getIrrigationPlan}
-        </button>
-      </div>
-
-      {error && <p className="text-rose-600 text-xs font-bold mt-2">{error}</p>}
-
-      {result && (
-        <div className="mt-3 bg-emerald-900 text-white rounded-2xl p-4 text-xs space-y-2 border border-emerald-500/30">
-          <div className="flex items-center justify-between">
-            <span className="font-black text-emerald-300 text-sm">{result.liters.toLocaleString()} {t.litersNeeded}</span>
-            <span className="text-[10px] bg-emerald-800 px-2 py-0.5 rounded-full font-bold">Single Field Calculation</span>
+      {/* Expanded Prediction Output */}
+      {showPlan && result && (
+        <div className="bg-emerald-950/80 border border-emerald-500/40 rounded-2xl p-4 text-xs text-white space-y-2 animate-fade-in">
+          <div className="flex justify-between items-center font-bold text-emerald-300">
+            <span>💧 ML Predicted Water Requirement</span>
+            <span className="text-[10px] text-emerald-400">{result.liters.toLocaleString()} Liters</span>
           </div>
           {result.schedule.map((s: any, idx: number) => (
-            <p key={idx} className="text-emerald-100 text-xs">⏰ {s.time_slot}: <span className="font-bold text-amber-300">{s.liters.toLocaleString()} Liters</span></p>
+            <p key={idx} className="text-slate-300 text-[11px]">
+              ⏰ {s.time_slot}: <span className="font-bold text-amber-300">{s.liters.toLocaleString()} Liters</span>
+            </p>
           ))}
         </div>
       )}
