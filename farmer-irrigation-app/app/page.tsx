@@ -757,11 +757,19 @@ export default function Home() {
                       const cropNameKey = cropOptions.find((c) => c.value === Number(form.Crop_Type))?.key || "wheat";
                       const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
                       const slot = result.schedule?.[0]?.time_slot || "06:00 AM - 08:00 AM";
+                      const cleanPhone = targetPhone.replace(/[^0-9+]/g, "");
+                      const nowStr = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+                      const refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`;
+
+                      const smsContent = `AgroSense Alert [${refId}] (${nowStr}): ${cropLabel} (${form.Field_Area_hectare} ha) requires ${result.liters.toLocaleString()} Liters water at ${slot}. Moisture=${form.Soil_Moisture}%, Temp=${form.Temperature_C}°C, Rain=${form.Rainfall_mm}mm.`;
+
+                      const subject = `AgroSense Irrigation Report [${refId}] - ${cropLabel} (${nowStr})`;
+                      const emailBody = `Hi ${user?.name || "Farmer"},\n\nHere is your real-time AgroSense ML Water Prediction Report (Ref: #${refId}):\n\n- Timestamp: ${nowStr}\n- Crop: ${cropLabel}\n- Farm Area: ${form.Field_Area_hectare} hectares\n- Recommended Water Volume: ${result.liters.toLocaleString()} Liters\n- Optimal Time Slot: ${slot}\n- Soil Moisture: ${form.Soil_Moisture}%\n- Temperature: ${form.Temperature_C}°C\n- Rainfall: ${form.Rainfall_mm} mm\n\nHappy Farming,\nAgroSense Intelligence Team`;
 
                       const smsNotif: NotificationItem = {
                         id: Date.now().toString(),
-                        title: `📱 SMS -> ${targetPhone}`,
-                        message: `SMS Dispatch: ${result.liters.toLocaleString()} Liters needed for ${cropLabel} (${form.Field_Area_hectare} ha) at ${slot}.`,
+                        title: `📱 SMS -> ${targetPhone} [${refId}]`,
+                        message: smsContent,
                         time: "Just now",
                         type: "schedule",
                         read: false,
@@ -769,15 +777,23 @@ export default function Home() {
 
                       const emailNotif: NotificationItem = {
                         id: (Date.now() + 1).toString(),
-                        title: `📧 Gmail -> ${targetEmail}`,
-                        message: `Gmail Dispatch: Irrigation report sent to ${targetEmail} for ${cropLabel} (${result.liters.toLocaleString()} L).`,
+                        title: `📧 Gmail -> ${targetEmail} [${refId}]`,
+                        message: `Gmail draft created for ${targetEmail}: ${result.liters.toLocaleString()} L.`,
                         time: "Just now",
                         type: "system",
                         read: false,
                       };
 
                       setNotifications((prev) => [smsNotif, emailNotif, ...prev]);
-                      setSmsSentStatus(`🚀 Multi-Channel Alert (SMS, WhatsApp, Gmail) dispatched to ${targetPhone} & ${targetEmail}!`);
+                      setSmsSentStatus(`🚀 Launching Mobile SMS App for ${targetPhone} & Gmail Draft tab for ${targetEmail}...`);
+
+                      // 1. Open Gmail Compose Tab
+                      window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${targetEmail}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`, "_blank");
+
+                      // 2. Launch Mobile SMS App
+                      setTimeout(() => {
+                        window.open(`sms:${cleanPhone}?body=${encodeURIComponent(smsContent)}`, "_blank");
+                      }, 300);
 
                       if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
                         new Notification("AgroSense Multi-Channel Dispatch", {
@@ -789,7 +805,7 @@ export default function Home() {
                     }}
                     className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md hover:brightness-110 transition flex items-center gap-1.5"
                   >
-                    <span>🚀</span> {t.landing?.sendBothBtn || "Dispatch All (SMS + Gmail + WhatsApp)"}
+                    <span>🚀</span> {t.landing?.sendBothBtn || "Send Dual Alert (SMS + Gmail)"}
                   </button>
                 </div>
 

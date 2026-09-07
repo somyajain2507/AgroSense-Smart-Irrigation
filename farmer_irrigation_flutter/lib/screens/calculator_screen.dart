@@ -380,6 +380,26 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.amber.shade700, foregroundColor: Colors.white),
                       ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          final nowStr = DateTime.now().toLocal().toString().split('.')[0];
+                          final refId = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
+                          final smsMsg =
+                              "AgroSense Alert [Ref #AGR-$refId] ($nowStr): ${cropsMap[cropType]} (${fieldAreaHectare} ha) requires ${result!['liters']} Liters water. Moisture=${soilMoisture.round()}%, Temp=${temperatureC.round()}°C, Rain=${rainfallMm.round()}mm.";
+                          final subject = "AgroSense Water Requirement Report [Ref #AGR-$refId]";
+                          final body =
+                              "Hi ${widget.user.name},\n\nYour field (${cropsMap[cropType]}, ${fieldAreaHectare} ha) requires ${result!['liters']} Liters of water.\n\nReport Timestamp: $nowStr\nReference ID: #AGR-$refId\nSoil Moisture: ${soilMoisture.round()}%\nTemperature: ${temperatureC.round()}°C\nRainfall: ${rainfallMm.round()} mm\n\nThank you for using AgroSense!";
+                          ApiService.launchGmail(emailController.text, subject, body);
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            ApiService.launchSms(phoneController.text, smsMsg);
+                          });
+                          widget.onAddNotification(2);
+                        },
+                        icon: const Text('🚀'),
+                        label: const Text('Send Dual Alert (SMS + Gmail)'),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal.shade900, foregroundColor: Colors.white),
+                      ),
                     ],
                   ),
                 ],
