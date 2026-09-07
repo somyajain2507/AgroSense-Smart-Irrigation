@@ -99,7 +99,35 @@ export default function NotificationsModal({
       read: false,
     };
     setNotifications((prev) => [newNotif, ...prev]);
-    setToastMessage("🔔 Test Notification Triggered!");
+    setToastMessage("⏳ Sending Twilio SMS & Email Alert...");
+
+    // Call backend API /api/send-alert to send direct Twilio cellular SMS & Email
+    try {
+      const res = await fetch("/api/send-alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: "8920299008",
+          email: "jainsomya2507@gmail.com",
+          crop: "East Greenhouse (Zone E)",
+          liters: 15000,
+          moisture: 24,
+          temp: 32,
+          rain: 0,
+          area: 1.5,
+          refId: `TEST-${Math.floor(1000 + Math.random() * 9000)}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.sms?.sent) {
+        setToastMessage("✅ Real Twilio SMS sent to +918920299008!");
+      } else {
+        setToastMessage("🔔 In-app Test Alert Triggered!");
+      }
+    } catch (e) {
+      console.error(e);
+      setToastMessage("🔔 In-app Test Alert Triggered!");
+    }
 
     // Browser Notification API
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -113,7 +141,7 @@ export default function NotificationsModal({
       }
     }
 
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 5000);
   };
 
   const getTypeStyles = (type: NotificationItem["type"]) => {
