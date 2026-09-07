@@ -653,12 +653,14 @@ export default function Home() {
                       const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
                       const slot = result.schedule?.[0]?.time_slot || "06:00 AM - 08:00 AM";
                       const cleanPhone = targetPhone.replace(/[^0-9+]/g, "");
+                      const nowStr = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+                      const refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`;
 
-                      const smsContent = `AgroSense Alert: ${cropLabel} (${form.Field_Area_hectare} ha) requires ${result.liters.toLocaleString()} Liters water at ${slot}. Moisture=${form.Soil_Moisture}%.`;
+                      const smsContent = `AgroSense Alert [${refId}] (${nowStr}): ${cropLabel} (${form.Field_Area_hectare} ha) requires ${result.liters.toLocaleString()} Liters water at ${slot}. Moisture=${form.Soil_Moisture}%, Temp=${form.Temperature_C}°C, Rain=${form.Rainfall_mm}mm.`;
 
                       const newNotif: NotificationItem = {
                         id: Date.now().toString(),
-                        title: `📱 SMS -> ${targetPhone}`,
+                        title: `📱 SMS -> ${targetPhone} [${refId}]`,
                         message: smsContent,
                         time: "Just now",
                         type: "schedule",
@@ -666,7 +668,7 @@ export default function Home() {
                       };
 
                       setNotifications((prev) => [newNotif, ...prev]);
-                      setSmsSentStatus(`📲 Opening Phone SMS app with message to ${targetPhone}...`);
+                      setSmsSentStatus(`📲 Opening Phone SMS app with alert #${refId} to ${targetPhone}...`);
 
                       // Open Native SMS App on Device
                       window.open(`sms:${cleanPhone}?body=${encodeURIComponent(smsContent)}`, "_blank");
@@ -686,12 +688,14 @@ export default function Home() {
                       const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
                       const slot = result.schedule?.[0]?.time_slot || "06:00 AM - 08:00 AM";
                       const cleanPhone = targetPhone.replace(/[^0-9]/g, "");
+                      const nowStr = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+                      const refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`;
 
-                      const waContent = `🌱 *AgroSense Smart Water Alert*\n\n🌾 *Crop:* ${cropLabel} (${form.Field_Area_hectare} ha)\n💧 *Water Needed:* ${result.liters.toLocaleString()} Liters\n🕒 *Schedule Slot:* ${slot}\n📊 *Soil Moisture:* ${form.Soil_Moisture}%\n\nIrrigate on time to optimize yield!`;
+                      const waContent = `🌱 *AgroSense Smart Water Alert* [Ref #${refId}]\n📅 *Timestamp:* ${nowStr}\n\n🌾 *Crop:* ${cropLabel} (${form.Field_Area_hectare} ha)\n💧 *Water Needed:* ${result.liters.toLocaleString()} Liters\n🕒 *Schedule Slot:* ${slot}\n📊 *Soil Moisture:* ${form.Soil_Moisture}%\n🌡️ *Temperature:* ${form.Temperature_C}°C\n🌧️ *Rainfall:* ${form.Rainfall_mm} mm\n\nIrrigate on time to optimize yield!`;
 
                       const newNotif: NotificationItem = {
                         id: Date.now().toString(),
-                        title: `💬 WhatsApp -> ${targetPhone}`,
+                        title: `💬 WhatsApp -> ${targetPhone} [${refId}]`,
                         message: `WhatsApp Alert sent to ${targetPhone} for ${cropLabel} (${result.liters.toLocaleString()} L).`,
                         time: "Just now",
                         type: "schedule",
@@ -699,7 +703,7 @@ export default function Home() {
                       };
 
                       setNotifications((prev) => [newNotif, ...prev]);
-                      setSmsSentStatus(`💬 Opening WhatsApp to dispatch alert to ${targetPhone}...`);
+                      setSmsSentStatus(`💬 Opening WhatsApp to dispatch alert #${refId} to ${targetPhone}...`);
 
                       // Open WhatsApp Direct
                       window.open(`https://wa.me/${cleanPhone.length <= 10 ? '91' + cleanPhone : cleanPhone}?text=${encodeURIComponent(waContent)}`, "_blank");
@@ -718,13 +722,15 @@ export default function Home() {
                       const cropNameKey = cropOptions.find((c) => c.value === Number(form.Crop_Type))?.key || "wheat";
                       const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
                       const slot = result.schedule?.[0]?.time_slot || "06:00 AM - 08:00 AM";
+                      const nowStr = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+                      const refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`;
 
-                      const subject = `AgroSense Smart Irrigation Report for ${user?.name || "Farmer"}`;
-                      const emailBody = `Hi ${user?.name || "Farmer"},\n\nHere is your real-time AgroSense ML Water Prediction:\n\n- Crop: ${cropLabel}\n- Farm Area: ${form.Field_Area_hectare} hectares\n- Recommended Water Volume: ${result.liters.toLocaleString()} Liters\n- Optimal Time Slot: ${slot}\n- Soil Moisture: ${form.Soil_Moisture}%\n- Temperature: ${form.Temperature_C}°C\n\nHappy Farming,\nAgroSense Intelligence Team`;
+                      const subject = `AgroSense Irrigation Report [${refId}] - ${cropLabel} (${nowStr})`;
+                      const emailBody = `Hi ${user?.name || "Farmer"},\n\nHere is your real-time AgroSense ML Water Prediction Report (Ref: #${refId}):\n\n- Timestamp: ${nowStr}\n- Crop: ${cropLabel}\n- Farm Area: ${form.Field_Area_hectare} hectares\n- Recommended Water Volume: ${result.liters.toLocaleString()} Liters\n- Optimal Time Slot: ${slot}\n- Soil Moisture: ${form.Soil_Moisture}%\n- Temperature: ${form.Temperature_C}°C\n- Rainfall: ${form.Rainfall_mm} mm\n\nHappy Farming,\nAgroSense Intelligence Team`;
 
                       const newNotif: NotificationItem = {
                         id: (Date.now() + 1).toString(),
-                        title: `📧 Gmail Sent -> ${targetEmail}`,
+                        title: `📧 Gmail Sent -> ${targetEmail} [${refId}]`,
                         message: `Gmail draft opened for ${targetEmail}: ${result.liters.toLocaleString()} L for ${cropLabel}.`,
                         time: "Just now",
                         type: "system",

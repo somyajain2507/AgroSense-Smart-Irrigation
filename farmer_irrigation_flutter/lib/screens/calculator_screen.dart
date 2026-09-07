@@ -339,8 +339,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                     children: [
                       ElevatedButton.icon(
                         onPressed: () {
+                          final nowStr = DateTime.now().toLocal().toString().split('.')[0];
+                          final refId = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
                           final msg =
-                              "AgroSense Alert: ${cropsMap[cropType]} (${fieldAreaHectare} ha) requires ${result!['liters']} Liters water. Moisture=${soilMoisture.round()}%.";
+                              "AgroSense Alert [Ref #AGR-$refId] ($nowStr): ${cropsMap[cropType]} (${fieldAreaHectare} ha) requires ${result!['liters']} Liters water. Moisture=${soilMoisture.round()}%, Temp=${temperatureC.round()}°C, Rain=${rainfallMm.round()}mm.";
                           ApiService.launchSms(phoneController.text, msg);
                           widget.onAddNotification(1);
                         },
@@ -351,8 +353,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                       ),
                       ElevatedButton.icon(
                         onPressed: () {
+                          final nowStr = DateTime.now().toLocal().toString().split('.')[0];
+                          final refId = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
                           final msg =
-                              "🌱 *AgroSense Water Alert*\n\n🌾 *Crop:* ${cropsMap[cropType]} (${fieldAreaHectare} ha)\n💧 *Water Needed:* ${result!['liters']} Liters\n📊 *Moisture:* ${soilMoisture.round()}%";
+                              "🌱 *AgroSense Smart Water Alert* [Ref #AGR-$refId]\n📅 *Timestamp:* $nowStr\n\n🌾 *Crop:* ${cropsMap[cropType]} (${fieldAreaHectare} ha)\n💧 *Water Needed:* ${result!['liters']} Liters\n📊 *Soil Moisture:* ${soilMoisture.round()}%\n🌡️ *Temperature:* ${temperatureC.round()}°C\n🌧️ *Rainfall:* ${rainfallMm.round()} mm\n\nIrrigate on time to optimize yield!";
                           ApiService.launchWhatsApp(phoneController.text, msg);
                           widget.onAddNotification(1);
                         },
@@ -363,9 +367,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                       ),
                       ElevatedButton.icon(
                         onPressed: () {
-                          final subject = "AgroSense Water Requirement Report";
+                          final nowStr = DateTime.now().toLocal().toString().split('.')[0];
+                          final refId = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
+                          final subject = "AgroSense Water Requirement Report [Ref #AGR-$refId]";
                           final body =
-                              "Hi ${widget.user.name},\n\nYour field (${cropsMap[cropType]}, ${fieldAreaHectare} ha) requires ${result!['liters']} Liters of water.\nSoil Moisture: ${soilMoisture.round()}%.";
+                              "Hi ${widget.user.name},\n\nYour field (${cropsMap[cropType]}, ${fieldAreaHectare} ha) requires ${result!['liters']} Liters of water.\n\nReport Timestamp: $nowStr\nReference ID: #AGR-$refId\nSoil Moisture: ${soilMoisture.round()}%\nTemperature: ${temperatureC.round()}°C\nRainfall: ${rainfallMm.round()} mm\n\nThank you for using AgroSense!";
                           ApiService.launchGmail(emailController.text, subject, body);
                           widget.onAddNotification(1);
                         },
