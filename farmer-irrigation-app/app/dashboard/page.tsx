@@ -18,7 +18,7 @@ import {
   Legend,
 } from "recharts";
 
-const API_URL = "https://filled-preteen-census.ngrok-free.dev";
+const API_URL = "/api";
 
 const WEATHER_LAT = 28.7180;
 const WEATHER_LON = 77.1680;

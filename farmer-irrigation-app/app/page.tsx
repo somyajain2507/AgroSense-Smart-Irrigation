@@ -6,7 +6,7 @@ import FarmerAuthModal, { FarmerUser } from "./components/FarmerAuthModal";
 import NotificationsModal, { NotificationItem } from "./components/NotificationsModal";
 import { translations, LangKey } from "./dashboard/translations";
 
-const API_URL = "https://filled-preteen-census.ngrok-free.dev";
+const API_URL = "/api";
 
 const statusColor: Record<string, string> = {
   low: "bg-red-500 text-white",
