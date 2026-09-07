@@ -757,18 +757,21 @@ export default function Home() {
                       const cropNameKey = cropOptions.find((c) => c.value === Number(form.Crop_Type))?.key || "wheat";
                       const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
                       const slot = result.schedule?.[0]?.time_slot || "06:00 AM - 08:00 AM";
-                      const cleanPhone = targetPhone.replace(/[^0-9+]/g, "");
+                      const cleanPhone = targetPhone.replace(/[^0-9]/g, "");
+                      const cleanWaPhone = cleanPhone.length <= 10 ? '91' + cleanPhone : cleanPhone;
                       const nowStr = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
                       const refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`;
 
                       const smsContent = `AgroSense Alert [${refId}] (${nowStr}): ${cropLabel} (${form.Field_Area_hectare} ha) requires ${result.liters.toLocaleString()} Liters water at ${slot}. Moisture=${form.Soil_Moisture}%, Temp=${form.Temperature_C}°C, Rain=${form.Rainfall_mm}mm.`;
+
+                      const waContent = `🌱 *AgroSense Smart Water Alert* [Ref #${refId}]\n📅 *Timestamp:* ${nowStr}\n\n🌾 *Crop:* ${cropLabel} (${form.Field_Area_hectare} ha)\n💧 *Water Needed:* ${result.liters.toLocaleString()} Liters\n🕒 *Schedule Slot:* ${slot}\n📊 *Soil Moisture:* ${form.Soil_Moisture}%\n🌡️ *Temperature:* ${form.Temperature_C}°C\n🌧️ *Rainfall:* ${form.Rainfall_mm} mm\n\nIrrigate on time to optimize yield!`;
 
                       const subject = `AgroSense Irrigation Report [${refId}] - ${cropLabel} (${nowStr})`;
                       const emailBody = `Hi ${user?.name || "Farmer"},\n\nHere is your real-time AgroSense ML Water Prediction Report (Ref: #${refId}):\n\n- Timestamp: ${nowStr}\n- Crop: ${cropLabel}\n- Farm Area: ${form.Field_Area_hectare} hectares\n- Recommended Water Volume: ${result.liters.toLocaleString()} Liters\n- Optimal Time Slot: ${slot}\n- Soil Moisture: ${form.Soil_Moisture}%\n- Temperature: ${form.Temperature_C}°C\n- Rainfall: ${form.Rainfall_mm} mm\n\nHappy Farming,\nAgroSense Intelligence Team`;
 
                       const smsNotif: NotificationItem = {
                         id: Date.now().toString(),
-                        title: `📱 SMS -> ${targetPhone} [${refId}]`,
+                        title: `📱 Mobile Alert -> ${targetPhone} [${refId}]`,
                         message: smsContent,
                         time: "Just now",
                         type: "schedule",
@@ -785,15 +788,22 @@ export default function Home() {
                       };
 
                       setNotifications((prev) => [smsNotif, emailNotif, ...prev]);
-                      setSmsSentStatus(`🚀 Launching Mobile SMS App for ${targetPhone} & Gmail Draft tab for ${targetEmail}...`);
+                      setSmsSentStatus(`🚀 Dispatching Dual Alert to Phone ${targetPhone} & Gmail ${targetEmail}...`);
 
                       // 1. Open Gmail Compose Tab
                       window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${targetEmail}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`, "_blank");
 
-                      // 2. Launch Mobile SMS App
-                      setTimeout(() => {
-                        window.open(`sms:${cleanPhone}?body=${encodeURIComponent(smsContent)}`, "_blank");
-                      }, 300);
+                      // 2. Open WhatsApp Direct Message for phone number (works on PC + Mobile)
+                      window.open(`https://wa.me/${cleanWaPhone}?text=${encodeURIComponent(waContent)}`, "_blank");
+
+                      // 3. Fallback Trigger native SMS protocol
+                      try {
+                        const smsLink = document.createElement("a");
+                        smsLink.href = `sms:${cleanPhone}?body=${encodeURIComponent(smsContent)}`;
+                        smsLink.click();
+                      } catch (e) {
+                        console.log("SMS URI trigger fallback", e);
+                      }
 
                       if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
                         new Notification("AgroSense Multi-Channel Dispatch", {
@@ -805,7 +815,7 @@ export default function Home() {
                     }}
                     className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md hover:brightness-110 transition flex items-center gap-1.5"
                   >
-                    <span>🚀</span> {t.landing?.sendBothBtn || "Send Dual Alert (SMS + Gmail)"}
+                    <span>🚀</span> {t.landing?.sendBothBtn || "Send Dual Alert (SMS/WhatsApp + Gmail)"}
                   </button>
                 </div>
 
