@@ -20,9 +20,9 @@ import {
 
 const API_URL = "https://filled-preteen-census.ngrok-free.dev";
 
-const WEATHER_LAT = 28.6092;
-const WEATHER_LON = 76.9791;
-const WEATHER_LOCATION_NAME = "Najafgarh, Delhi";
+const WEATHER_LAT = 28.7180;
+const WEATHER_LON = 77.1680;
+const WEATHER_LOCATION_NAME = "Mahendra Park, Delhi";
 
 import { translations, languageOptions, type LangKey } from "./translations";
 
@@ -848,27 +848,57 @@ function WeatherView({ t }: any) {
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [locationName, setLocationName] = useState("Mahendra Park, Delhi");
+  const [lat, setLat] = useState(28.7180);
+  const [lon, setLon] = useState(77.1680);
+  const [detecting, setDetecting] = useState(false);
+
+  async function fetchWeatherData(latitude: number, longitude: number) {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
+      );
+      const data = await res.json();
+      setWeather(data);
+    } catch (err) {
+      console.error(err);
+      setError("Could not fetch live weather data.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchWeather() {
-      try {
-        const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
-        );
-        const data = await res.json();
-        setWeather(data);
-      } catch (err) {
-        console.error(err);
-        setError("Could not fetch live weather data.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchWeather();
-  }, []);
+    fetchWeatherData(lat, lon);
+  }, [lat, lon]);
 
-  if (loading) return <p className="text-gray-500">Loading live weather...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
+  const handleDetectLocation = () => {
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      setDetecting(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const userLat = position.coords.latitude;
+          const userLon = position.coords.longitude;
+          setLat(userLat);
+          setLon(userLon);
+          setLocationName(`Live GPS (${userLat.toFixed(2)}°, ${userLon.toFixed(2)}°) — Mahendra Park Area`);
+          setDetecting(false);
+        },
+        (err) => {
+          console.error(err);
+          alert("Could not detect browser location. Defaulting to Mahendra Park, Delhi.");
+          setDetecting(false);
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  };
+
+  if (loading) return <p className="text-slate-500 text-xs font-bold animate-pulse">Loading live weather for {locationName}...</p>;
+  if (error) return <p className="text-rose-600 text-xs font-bold">{error}</p>;
   if (!weather) return null;
 
   const current = weather.current;
@@ -876,36 +906,48 @@ function WeatherView({ t }: any) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl shadow p-5">
-        <h3 className="font-semibold mb-1">{t.weatherTitle} — {WEATHER_LOCATION_NAME}</h3>
-        <p className="text-xs text-gray-400 mb-4">{t.liveData}</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-lg text-slate-900">{t.weatherTitle} — {locationName}</h3>
+            <p className="text-xs text-slate-500">{t.liveData} • Lat: {lat.toFixed(4)}°, Lon: {lon.toFixed(4)}°</p>
+          </div>
+          <button
+            onClick={handleDetectLocation}
+            disabled={detecting}
+            className="self-start sm:self-center text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3.5 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5"
+          >
+            <span>📍</span> {detecting ? "Detecting GPS..." : "Auto-Detect My GPS Location"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
           <StatCard label={t.weatherStats.temp} value={`${current.temperature_2m}°C`} sub={t.weatherStats.current} barColor="bg-orange-500" />
           <StatCard label={t.weatherStats.humidity} value={`${current.relative_humidity_2m}%`} sub={t.weatherStats.current} barColor="bg-blue-500" />
-          <StatCard label={t.weatherStats.wind} value={`${current.wind_speed_10m} km/h`} sub={t.weatherStats.current} barColor="bg-gray-500" />
-          <StatCard label={t.weatherStats.precip} value={`${current.precipitation} mm`} sub={t.weatherStats.lastHour} barColor="bg-blue-500" />
+          <StatCard label={t.weatherStats.wind} value={`${current.wind_speed_10m} km/h`} sub={t.weatherStats.current} barColor="bg-slate-500" />
+          <StatCard label={t.weatherStats.precip} value={`${current.precipitation} mm`} sub={t.weatherStats.lastHour} barColor="bg-teal-500" />
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow p-5">
-        <h3 className="font-semibold mb-4">{t.forecast}</h3>
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6">
+        <h3 className="font-bold text-lg text-slate-900 mb-4">{t.forecast}</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-gray-500 border-b">
-                <th className="py-2 pr-4">{t.weatherTable.date}</th>
-                <th className="py-2 pr-4">{t.weatherTable.max}</th>
-                <th className="py-2 pr-4">{t.weatherTable.min}</th>
-                <th className="py-2 pr-4">{t.weatherTable.rain}</th>
+              <tr className="text-left text-slate-500 border-b border-slate-200 uppercase tracking-wider text-[11px] font-bold">
+                <th className="py-3 pr-4">{t.weatherTable.date}</th>
+                <th className="py-3 pr-4">{t.weatherTable.max}</th>
+                <th className="py-3 pr-4">{t.weatherTable.min}</th>
+                <th className="py-3 pr-4">{t.weatherTable.rain}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {daily.time.map((date: string, i: number) => (
-                <tr key={i} className="border-b last:border-0">
-                  <td className="py-2 pr-4">{date}</td>
-                  <td className="py-2 pr-4">{daily.temperature_2m_max[i]}°C</td>
-                  <td className="py-2 pr-4">{daily.temperature_2m_min[i]}°C</td>
-                  <td className="py-2 pr-4">{daily.precipitation_sum[i]} mm</td>
+                <tr key={i} className="hover:bg-slate-50 transition">
+                  <td className="py-3 pr-4 font-bold text-slate-800">{date}</td>
+                  <td className="py-3 pr-4 font-bold text-orange-600">{daily.temperature_2m_max[i]}°C</td>
+                  <td className="py-3 pr-4 font-bold text-blue-600">{daily.temperature_2m_min[i]}°C</td>
+                  <td className="py-3 pr-4 font-semibold text-teal-700">{daily.precipitation_sum[i]} mm</td>
                 </tr>
               ))}
             </tbody>
