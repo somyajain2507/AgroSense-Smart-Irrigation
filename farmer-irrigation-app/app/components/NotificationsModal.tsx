@@ -89,7 +89,21 @@ export default function NotificationsModal({
     );
   };
 
+  const speakAlert = (text: string) => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const hiVoice = voices.find((v) => v.lang.includes("hi") || v.lang.includes("IN"));
+      if (hiVoice) utterance.voice = hiVoice;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const triggerTestAlert = async () => {
+    const speechText = "Dhyan dein! East Greenhouse khet me zameen ki nami 24 percent ho gayi hai. Paani chalayein.";
     const newNotif: NotificationItem = {
       id: Date.now().toString(),
       title: "⚡ Live Sensor Simulation Alert",
@@ -99,7 +113,10 @@ export default function NotificationsModal({
       read: false,
     };
     setNotifications((prev) => [newNotif, ...prev]);
-    setToastMessage("⏳ Sending Twilio SMS & Email Alert...");
+    setToastMessage("⏳ Sending Twilio SMS & Speaking Voice Alert...");
+
+    // Speak out loud in natural voice for non-reading farmers
+    speakAlert(speechText);
 
     // Call backend API /api/send-alert to send direct Twilio cellular SMS & Email
     try {
@@ -120,13 +137,13 @@ export default function NotificationsModal({
       });
       const data = await res.json();
       if (data.sms?.sent) {
-        setToastMessage("✅ Real Twilio SMS sent to +918920299008!");
+        setToastMessage("✅ Real Twilio SMS sent + 🔊 Voice Alert Spoken!");
       } else {
-        setToastMessage("🔔 In-app Test Alert Triggered!");
+        setToastMessage("🔊 Voice Alert Spoken & In-app Alert Triggered!");
       }
     } catch (e) {
       console.error(e);
-      setToastMessage("🔔 In-app Test Alert Triggered!");
+      setToastMessage("🔊 Voice Alert Spoken!");
     }
 
     // Browser Notification API
@@ -226,7 +243,20 @@ export default function NotificationsModal({
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-bold text-xs">{n.title}</span>
-                  <span className="text-[10px] text-gray-500 whitespace-nowrap">{n.time}</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakAlert(`${n.title}. ${n.message}`);
+                      }}
+                      className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition"
+                      title="Listen Voice Alert"
+                    >
+                      🔊 Suno
+                    </button>
+                    <span className="text-[10px] text-gray-500 whitespace-nowrap">{n.time}</span>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-700 mt-1 leading-relaxed">{n.message}</p>
               </div>
