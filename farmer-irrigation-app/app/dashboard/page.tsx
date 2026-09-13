@@ -846,7 +846,20 @@ function FieldCard({ t, field, index, removeField }: any) {
 // Irrigation Plans tab
 // ============================================================
 function IrrigationPlansView({ t, results }: any) {
-  const allSlots = ["05:00-06:30", "18:00-19:30", "20:30-22:00"];
+  // Collect all unique time slots across field schedules dynamically
+  const uniqueSlotsSet = new Set<string>();
+  results.forEach((r: any) => {
+    if (Array.isArray(r.schedule)) {
+      r.schedule.forEach((s: any) => {
+        if (s.time_slot) uniqueSlotsSet.add(s.time_slot);
+      });
+    }
+  });
+
+  const allSlots = Array.from(uniqueSlotsSet).length > 0
+    ? Array.from(uniqueSlotsSet)
+    : ["05:30-07:00", "17:30-19:00"];
+
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
       <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -869,10 +882,10 @@ function IrrigationPlansView({ t, results }: any) {
               <th className="py-3.5 px-4 text-left">{t.table.field} & Zone</th>
               {allSlots.map((slot) => (
                 <th key={slot} className="py-3.5 px-4 text-left">
-                  🕒 {slot}
+                  🕒 {slot} Slot
                 </th>
               ))}
-              <th className="py-3.5 px-4 text-left">Total Required</th>
+              <th className="py-3.5 px-4 text-left">Total Required Water</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -883,22 +896,26 @@ function IrrigationPlansView({ t, results }: any) {
                   <span className="text-emerald-700 text-[11px] font-semibold">{r.zone} • {r.crop}</span>
                 </td>
                 {allSlots.map((slot) => {
-                  const match = r.schedule.find((s: any) => s.time_slot === slot);
+                  const match = r.schedule?.find((s: any) => s.time_slot === slot);
                   return (
                     <td key={slot} className="py-4 px-4">
                       {match ? (
                         <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl font-black text-xs inline-block shadow-xs">
-                          💧 {match.liters.toLocaleString()} L
+                          💧 {match.liters.toLocaleString()} Liters
+                        </span>
+                      ) : r.schedule && r.schedule.length > 0 ? (
+                        <span className="bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1.5 rounded-xl font-black text-xs inline-block shadow-xs">
+                          💧 {Math.round(r.predicted_liters / allSlots.length).toLocaleString()} Liters
                         </span>
                       ) : (
-                        <span className="text-slate-300 text-xs font-semibold">—</span>
+                        <span className="text-slate-400 text-xs font-semibold">—</span>
                       )}
                     </td>
                   );
                 })}
                 <td className="py-4 px-4">
-                  <span className="bg-slate-900 text-emerald-300 px-3 py-1.5 rounded-xl font-black text-xs">
-                    {r.predicted_liters.toLocaleString()} L
+                  <span className="bg-slate-900 text-emerald-300 px-3.5 py-1.5 rounded-xl font-black text-xs shadow-md">
+                    💧 {r.predicted_liters.toLocaleString()} Liters
                   </span>
                 </td>
               </tr>

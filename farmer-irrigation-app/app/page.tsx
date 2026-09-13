@@ -609,11 +609,24 @@ export default function Home() {
                   <p className="text-emerald-200 text-xs mt-1">Total water needed for {form.Field_Area_hectare} hectares field area</p>
                 </div>
 
-                <div className="bg-black/30 p-4 rounded-xl text-center min-w-[160px] border border-white/10">
-                  <div className="text-[10px] text-emerald-300 font-semibold uppercase">Suggested Schedule</div>
-                  <div className="text-sm font-bold text-amber-300 mt-0.5">
-                    {result.schedule?.[0]?.time_slot || "06:00 AM - 08:00 AM"}
+                <div className="bg-black/40 p-4 rounded-2xl text-left min-w-[220px] border border-white/10 space-y-2">
+                  <div className="text-[10px] text-emerald-300 font-extrabold uppercase tracking-wider">
+                    🕒 Suggested Irrigation Plan
                   </div>
+                  {result.schedule && result.schedule.length > 0 ? (
+                    result.schedule.map((s: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center text-xs gap-3">
+                        <span className="text-slate-300 font-semibold">⏰ {s.time_slot}</span>
+                        <span className="font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
+                          {s.liters.toLocaleString()} L
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs font-bold text-amber-300">
+                      ⏰ 05:30-07:00 Slot: {Math.round(result.liters * 0.6).toLocaleString()} L
+                    </div>
+                  )}
                 </div>
               </div>
 
