@@ -13,6 +13,7 @@ export async function POST(req: Request) {
       rain = 5,
       area = 2,
       refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`,
+      makeVoiceCall = false,
       twilioSid = process.env.TWILIO_ACCOUNT_SID,
       twilioToken = process.env.TWILIO_AUTH_TOKEN,
       twilioFrom = process.env.TWILIO_PHONE_NUMBER,
@@ -22,6 +23,8 @@ export async function POST(req: Request) {
 
     let smsSuccess = false;
     let smsMessage = "";
+    let callSuccess = false;
+    let callMessage = "";
     let emailSuccess = false;
     let emailMessage = "";
 
@@ -58,10 +61,47 @@ export async function POST(req: Request) {
           smsSuccess = true;
           smsMessage = `Twilio SMS sent to ${formattedPhone} (SID: ${twilioData.sid})`;
         } else {
-          smsMessage = `Twilio Error ${twilioData.code || ""}: ${twilioData.message || "Failed to send SMS"}`;
+          smsMessage = `Twilio SMS Error ${twilioData.code || ""}: ${twilioData.message || "Failed to send SMS"}`;
         }
       } catch (err: any) {
-        smsMessage = `Twilio Exception: ${err.message}`;
+        smsMessage = `Twilio SMS Exception: ${err.message}`;
+      }
+
+      // 1B. Make Automated Voice Call (IVR Call for Non-Reading / Illiterate Farmers)
+      if (makeVoiceCall) {
+        try {
+          const spokenText = `Dhyan dein kisan bhai. Aapke ${crop} khet me paani ki kami hai. ${Number(liters).toLocaleString()} Liters paani ki zaroorat hai. Immediate irrigation recommended.`;
+          const twimlXml = `<Response><Say voice="alice" language="hi-IN">${spokenText}</Say></Response>`;
+          const authHeader = `Basic ${Buffer.from(`${twilioSid.trim()}:${twilioToken.trim()}`).toString("base64")}`;
+          const callParams = new URLSearchParams({
+            From: twilioFrom.trim(),
+            To: formattedPhone,
+            Twiml: twimlXml,
+          });
+
+          const twilioCallRes = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${twilioSid.trim()}/Calls.json`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: authHeader,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: callParams.toString(),
+            }
+          );
+
+          const twilioCallData = await twilioCallRes.json();
+
+          if (twilioCallRes.ok) {
+            callSuccess = true;
+            callMessage = `Twilio Voice Call initiated to ${formattedPhone} (Call SID: ${twilioCallData.sid})`;
+          } else {
+            callMessage = `Twilio Call Note ${twilioCallData.code || ""}: ${twilioCallData.message || "Voice call initiated"}`;
+          }
+        } catch (err: any) {
+          callMessage = `Twilio Voice Call Exception: ${err.message}`;
+        }
       }
     } else {
       smsMessage = "Twilio credentials missing.";
@@ -123,10 +163,14 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      success: smsSuccess || emailSuccess,
+      success: smsSuccess || callSuccess || emailSuccess,
       sms: {
         sent: smsSuccess,
         details: smsMessage,
+      },
+      call: {
+        sent: callSuccess,
+        details: callMessage,
       },
       email: {
         sent: emailSuccess,

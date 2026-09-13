@@ -102,6 +102,10 @@ export default function Home() {
   const [showTwilioConfig, setShowTwilioConfig] = useState(false);
   const [dispatching, setDispatching] = useState(false);
 
+  // Voice Call Modal State for Non-Reading / Illiterate Farmers
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [callSpeechText, setCallSpeechText] = useState("");
+
   const [form, setForm] = useState({
     Crop_Type: 1,
     Soil_Type: 1,
@@ -889,6 +893,57 @@ export default function Home() {
                   >
                     <span>🚀</span> {dispatching ? "Sending via Twilio..." : "Send Dual Alert (Twilio SMS + Gmail)"}
                   </button>
+
+                  {/* 5. Voice Call Alert Button (For Non-Reading / Illiterate Farmers) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cropNameKey = cropOptions.find((c) => c.value === Number(form.Crop_Type))?.key || "wheat";
+                      const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
+                      const litersVal = result.liters || 297564;
+                      const speech = `Dhyan dein kisan bhai! Aapke ${cropLabel} khet me zameen ki nami ${form.Soil_Moisture} percent reh gayi hai. Immediate ${litersVal.toLocaleString()} Liters paani ki zarurat hai.`;
+
+                      setCallSpeechText(speech);
+                      setIsCallModalOpen(true);
+
+                      // Speak voice out loud in spoken voice
+                      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(speech);
+                        utterance.rate = 0.9;
+                        utterance.pitch = 1.0;
+                        const voices = window.speechSynthesis.getVoices();
+                        const hiVoice = voices.find((v) => v.lang.includes("hi") || v.lang.includes("IN"));
+                        if (hiVoice) utterance.voice = hiVoice;
+                        window.speechSynthesis.speak(utterance);
+                      }
+
+                      // Backend API Call to trigger Twilio Voice Call REST API
+                      fetch("/api/send-alert", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          phone: targetPhone,
+                          email: targetEmail,
+                          crop: cropLabel,
+                          liters: litersVal,
+                          moisture: form.Soil_Moisture,
+                          temp: form.Temperature_C,
+                          rain: form.Rainfall_mm,
+                          area: form.Field_Area_hectare,
+                          makeVoiceCall: true,
+                          twilioSid,
+                          twilioToken,
+                          twilioFrom,
+                        }),
+                      }).catch(console.error);
+
+                      setSmsSentStatus(`📞 Initiating Automated Voice Call to ${targetPhone}...`);
+                    }}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition flex items-center gap-1.5"
+                  >
+                    <span>📞</span> Trigger Voice Call (For Non-Reading Farmers)
+                  </button>
                 </div>
 
                 {smsSentStatus && (
@@ -1003,6 +1058,69 @@ export default function Home() {
         setNotifications={setNotifications}
         t={t}
       />
+
+      {/* Voice Call Simulator Modal (For Non-Reading / Illiterate Farmers) */}
+      {isCallModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+          <div className="bg-slate-900 border-2 border-indigo-500/50 text-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 text-center relative overflow-hidden">
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="space-y-2">
+              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-3xl shadow-lg shadow-purple-500/40 animate-bounce">
+                📞
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
+                Incoming Voice Call (Awaaz Alert)
+              </span>
+              <h3 className="text-xl font-black pt-2">AgroSense Voice Assistant</h3>
+              <p className="text-xs text-slate-400 font-mono">Calling {targetPhone}...</p>
+            </div>
+
+            <div className="bg-slate-800/90 border border-purple-500/30 p-4 rounded-2xl text-left space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
+                <span className="animate-pulse">🎙️</span> Spoken Audio Transcript (Hinglish/Hindi):
+              </div>
+              <p className="text-sm font-semibold text-slate-200 leading-relaxed italic">
+                "{callSpeechText}"
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(callSpeechText);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1.0;
+                    const voices = window.speechSynthesis.getVoices();
+                    const hiVoice = voices.find((v) => v.lang.includes("hi") || v.lang.includes("IN"));
+                    if (hiVoice) utterance.voice = hiVoice;
+                    window.speechSynthesis.speak(utterance);
+                  }
+                }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-3 rounded-2xl text-xs shadow-lg transition flex items-center gap-2"
+              >
+                <span>🔊</span> Sunayein (Replay Voice)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                    window.speechSynthesis.cancel();
+                  }
+                  setIsCallModalOpen(false);
+                }}
+                className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-3 rounded-2xl text-xs shadow-lg transition flex items-center gap-2"
+              >
+                <span>❌</span> End Call / Band Karein
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
