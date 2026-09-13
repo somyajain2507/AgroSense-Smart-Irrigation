@@ -20,9 +20,9 @@ import {
 
 const API_URL = "/api";
 
-const WEATHER_LAT = 28.7180;
-const WEATHER_LON = 77.1680;
-const WEATHER_LOCATION_NAME = "Mahendra Park, Delhi";
+const WEATHER_LAT = 28.8427;
+const WEATHER_LON = 77.1051;
+const WEATHER_LOCATION_NAME = "NIT Delhi (National Institute of Technology Delhi)";
 
 import { translations, languageOptions, type LangKey } from "./translations";
 
@@ -1050,9 +1050,9 @@ function WeatherView({ t }: any) {
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [locationName, setLocationName] = useState("Mahendra Park, Delhi");
-  const [lat, setLat] = useState(28.7180);
-  const [lon, setLon] = useState(77.1680);
+  const [locationName, setLocationName] = useState("NIT Delhi (National Institute of Technology Delhi)");
+  const [lat, setLat] = useState(28.8427);
+  const [lon, setLon] = useState(77.1051);
   const [detecting, setDetecting] = useState(false);
 
   async function fetchWeatherData(latitude: number, longitude: number) {
@@ -1085,12 +1085,25 @@ function WeatherView({ t }: any) {
           const userLon = position.coords.longitude;
           setLat(userLat);
           setLon(userLon);
-          setLocationName(`Live GPS (${userLat.toFixed(2)}°, ${userLon.toFixed(2)}°) — Mahendra Park Area`);
-          setDetecting(false);
+
+          try {
+            // Reverse geocode live coordinates
+            const geoRes = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${userLat}&longitude=${userLon}&localityLanguage=en`
+            );
+            const geoData = await geoRes.json();
+            const locality = geoData.locality || geoData.city || geoData.localityInfo?.informative?.[0]?.name || "NIT Delhi Campus";
+            const principal = geoData.principalSubdivision || "Delhi";
+            setLocationName(`📍 ${locality}, ${principal} (${userLat.toFixed(4)}°, ${userLon.toFixed(4)}°)`);
+          } catch (e) {
+            setLocationName(`📍 Live GPS Location (${userLat.toFixed(4)}°, ${userLon.toFixed(4)}°)`);
+          } finally {
+            setDetecting(false);
+          }
         },
         (err) => {
           console.error(err);
-          alert("Could not detect browser location. Defaulting to Mahendra Park, Delhi.");
+          setLocationName("NIT Delhi (National Institute of Technology Delhi)");
           setDetecting(false);
         }
       );
@@ -1098,6 +1111,11 @@ function WeatherView({ t }: any) {
       alert("Geolocation is not supported by your browser.");
     }
   };
+
+  useEffect(() => {
+    // Auto-detect browser location on mount
+    handleDetectLocation();
+  }, []);
 
   if (loading) return <p className="text-slate-500 text-xs font-bold animate-pulse">Loading live weather for {locationName}...</p>;
   if (error) return <p className="text-rose-600 text-xs font-bold">{error}</p>;

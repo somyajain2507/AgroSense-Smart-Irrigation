@@ -57,7 +57,7 @@ export default function FarmerAuthModal({ isOpen, onClose, onSuccess, t }: Farme
       name: "Ramesh Kumar (Demo)",
       phone: "+91 98765 43210",
       email: "farmer.ramesh@gmail.com",
-      location: "Mahendra Park, Delhi",
+      location: "NIT Delhi, Delhi",
       crop: "Wheat",
       farmArea: 3.5,
       isLoggedIn: true,
