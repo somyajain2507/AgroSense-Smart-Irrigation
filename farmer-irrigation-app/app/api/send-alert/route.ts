@@ -76,10 +76,12 @@ export async function POST(req: Request) {
           const spokenText = `Dhyan dein kisan bhai. Aapke ${crop} khet me paani ki kami hai. ${Number(liters).toLocaleString()} Liters paani ki zaroorat hai. Immediate irrigation recommended.`;
           const twimlXml = `<Response><Say voice="alice" language="hi-IN">${spokenText}</Say></Response>`;
           const authHeader = `Basic ${Buffer.from(`${twilioSid.trim()}:${twilioToken.trim()}`).toString("base64")}`;
+          
           const callParams = new URLSearchParams({
             From: twilioFrom.trim(),
             To: formattedPhone,
             Twiml: twimlXml,
+            MachineDetection: "Enable",
           });
 
           const twilioCallRes = await fetch(
@@ -98,7 +100,7 @@ export async function POST(req: Request) {
 
           if (twilioCallRes.ok) {
             callSuccess = true;
-            callMessage = `Twilio Voice Call initiated to ${formattedPhone} (Call SID: ${twilioCallData.sid})`;
+            callMessage = `Twilio Voice Call dialed to ${formattedPhone} (SID: ${twilioCallData.sid})`;
           } else {
             callMessage = `Twilio Call Note ${twilioCallData.code || ""}: ${twilioCallData.message || "Voice call initiated"}`;
           }
