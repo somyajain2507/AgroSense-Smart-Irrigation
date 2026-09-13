@@ -91,7 +91,7 @@ export default function Home() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
-  const [targetPhone, setTargetPhone] = useState("+91 98765 43210");
+  const [targetPhone, setTargetPhone] = useState("+91 8920299008");
   const [targetEmail, setTargetEmail] = useState("farmer.ramesh@gmail.com");
   const [smsSentStatus, setSmsSentStatus] = useState<string | null>(null);
 
@@ -897,7 +897,7 @@ export default function Home() {
                   {/* 5. Voice Call Alert Button (For Non-Reading / Illiterate Farmers) */}
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const cropNameKey = cropOptions.find((c) => c.value === Number(form.Crop_Type))?.key || "wheat";
                       const cropLabel = t.crops[cropNameKey as keyof typeof t.crops] || "Crop";
                       const litersVal = result.liters || 297564;
@@ -905,8 +905,9 @@ export default function Home() {
 
                       setCallSpeechText(speech);
                       setIsCallModalOpen(true);
+                      setSmsSentStatus(`📞 Initiating Twilio Cellular Voice Call to ${targetPhone}...`);
 
-                      // Speak voice out loud in spoken voice
+                      // Speak voice out loud in browser voice
                       if (typeof window !== "undefined" && "speechSynthesis" in window) {
                         window.speechSynthesis.cancel();
                         const utterance = new SpeechSynthesisUtterance(speech);
@@ -919,26 +920,35 @@ export default function Home() {
                       }
 
                       // Backend API Call to trigger Twilio Voice Call REST API
-                      fetch("/api/send-alert", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          phone: targetPhone,
-                          email: targetEmail,
-                          crop: cropLabel,
-                          liters: litersVal,
-                          moisture: form.Soil_Moisture,
-                          temp: form.Temperature_C,
-                          rain: form.Rainfall_mm,
-                          area: form.Field_Area_hectare,
-                          makeVoiceCall: true,
-                          twilioSid,
-                          twilioToken,
-                          twilioFrom,
-                        }),
-                      }).catch(console.error);
-
-                      setSmsSentStatus(`📞 Initiating Automated Voice Call to ${targetPhone}...`);
+                      try {
+                        const apiRes = await fetch("/api/send-alert", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            phone: targetPhone,
+                            email: targetEmail,
+                            crop: cropLabel,
+                            liters: litersVal,
+                            moisture: form.Soil_Moisture,
+                            temp: form.Temperature_C,
+                            rain: form.Rainfall_mm,
+                            area: form.Field_Area_hectare,
+                            makeVoiceCall: true,
+                            twilioSid: twilioSid || undefined,
+                            twilioToken: twilioToken || undefined,
+                            twilioFrom: twilioFrom || undefined,
+                          }),
+                        });
+                        const resData = await apiRes.json();
+                        if (resData.call?.sent || resData.call?.details) {
+                          setSmsSentStatus(`📞 ${resData.call.details}`);
+                        } else {
+                          setSmsSentStatus(`📞 Voice Call status: ${JSON.stringify(resData.call || resData)}`);
+                        }
+                      } catch (err: any) {
+                        console.error(err);
+                        setSmsSentStatus(`📞 Voice Call initiated to ${targetPhone}`);
+                      }
                     }}
                     className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition flex items-center gap-1.5"
                   >

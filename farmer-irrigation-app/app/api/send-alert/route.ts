@@ -3,6 +3,14 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
+
+    // Use client-provided credentials if non-empty, otherwise fallback to .env.local
+    const twilioSid = (data.twilioSid && data.twilioSid.trim()) || process.env.TWILIO_ACCOUNT_SID || "";
+    const twilioToken = (data.twilioToken && data.twilioToken.trim()) || process.env.TWILIO_AUTH_TOKEN || "";
+    const twilioFrom = (data.twilioFrom && data.twilioFrom.trim()) || process.env.TWILIO_PHONE_NUMBER || "";
+    const sendgridKey = (data.sendgridKey && data.sendgridKey.trim()) || process.env.SENDGRID_API_KEY || "";
+    const sendgridFrom = (data.sendgridFrom && data.sendgridFrom.trim()) || process.env.SENDGRID_FROM_EMAIL || "";
+
     const {
       phone = "8920299008",
       email = "jainsomya2507@gmail.com",
@@ -14,11 +22,6 @@ export async function POST(req: Request) {
       area = 2,
       refId = `AGR-${Math.floor(1000 + Math.random() * 9000)}`,
       makeVoiceCall = false,
-      twilioSid = process.env.TWILIO_ACCOUNT_SID,
-      twilioToken = process.env.TWILIO_AUTH_TOKEN,
-      twilioFrom = process.env.TWILIO_PHONE_NUMBER,
-      sendgridKey = process.env.SENDGRID_API_KEY,
-      sendgridFrom = process.env.SENDGRID_FROM_EMAIL,
     } = data;
 
     let smsSuccess = false;
