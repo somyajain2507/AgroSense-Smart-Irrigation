@@ -287,9 +287,10 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-16 px-4 lg:px-8 text-center bg-gradient-to-b from-slate-900 via-emerald-950/40 to-slate-900">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/15 blur-3xl rounded-full pointer-events-none" />
+      {/* Hero Section with Farmer Field Background like Meghdoot */}
+      <section className="relative overflow-hidden pt-16 pb-20 px-4 lg:px-8 text-center bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/hero-bg.jpg')" }}>
+        {/* Dark Gradient Overlay for Maximum Readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-900/75 to-slate-950/95 backdrop-blur-[1px]" />
         
         <div className="max-w-4xl mx-auto space-y-6 relative z-10">
           <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-4 py-1.5 rounded-full text-xs font-semibold text-emerald-300 glow-badge animate-pulse-subtle">
